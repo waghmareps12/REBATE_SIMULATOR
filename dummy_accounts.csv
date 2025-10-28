@@ -1,0 +1,16 @@
+rfp_group,rfp_name,curryr_rev,prevyr_rev
+Group A,Account 1,12000,10000
+Group A,Account 2,25000,22000
+Group B,Account 3,50000,48000
+Group C,Account 4,8000,9000
+Group A,Account 5,95000,85000
+Group B,Account 6,150000,130000
+Group C,Account 7,7500,7000
+Group A,Account 8,33000,30000
+Group B,Account 9,60000,55000
+Group C,Account 10,120000,125000
+Group A,Account 11,4500,4000
+Group B,Account 12,89000,82000
+Group A,Account 13,21000,18000
+Group B,Account 14,180000,160000
+Group C,Account 15,9900,9500

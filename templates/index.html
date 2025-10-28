@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rebate Program Simulator</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container-fluid mt-4">
+        <header class="text-center mb-4">
+            <h1>📊 Rebate Program Simulator</h1>
+            <p class="lead">An interactive tool to calculate and visualize rebate program costs.</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="row">
+            <!-- Left Panel: Inputs -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header">
+                        <h3>1. Upload Files</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="grid-file" class="form-label">Upload Rebate Grid CSV</label>
+                            <input class="form-control" type="file" id="grid-file" accept=".csv">
+                            <div class="form-text">First column: Volume bins. Headers: Growth bins. Cells: Rebate rates.</div>
+                        </div>
+                        <hr>
+                        <div class="mb-3">
+                            <label for="accounts-file" class="form-label">Upload Accounts CSV</label>
+                            <input class="form-control" type="file" id="accounts-file" accept=".csv">
+                             <div class="form-text">Columns: `rfp_group`, `rfp_name`, `curryr_rev`, `prevyr_rev`.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0">2. Rebate Grid</h3>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-success" id="add-row">+ Row</button>
+                            <button type="button" class="btn btn-outline-danger" id="remove-row">- Row</button>
+                            <button type="button" class="btn btn-outline-success" id="add-col">+ Col</button>
+                            <button type="button" class="btn btn-outline-danger" id="remove-col">- Col</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="grid-display" class="table-responsive"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Outputs -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3>3. Calculated Rebates</h3>
+                        <div id="total-rebate-display" class="fs-4 fw-bold"></div>
+                    </div>
+                    <div class="card-body">
+                        <div id="results-table" class="table-responsive"></div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mt-4">
+                    <div class="card-header">
+                        <h3>4. Tier Summary</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="summary-table" class="table-responsive"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>
