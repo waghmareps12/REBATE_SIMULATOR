@@ -95,6 +95,151 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- Tab Switching ---
+    const tabs = document.querySelectorAll('.tab-btn');
+    const contents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+
+            // Add active class
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.tab).classList.add('active');
+        });
+    });
+
+    // --- Static Calculator Logic ---
+    const generateGridBtn = document.getElementById('generate-grid-btn');
+    const calcStaticBtn = document.getElementById('calc-static-btn');
+    const inputGridTable = document.getElementById('input-grid-table');
+
+    generateGridBtn.addEventListener('click', () => {
+        // Parse bins
+        let volumeBins, growthBins;
+        try {
+            volumeBins = parseBins(volBinsInput.value, true);
+            growthBins = parseBins(growthBinsInput.value, false);
+        } catch (e) {
+            alert("Invalid Bin Inputs");
+            return;
+        }
+
+        // Render Input Table
+        const thead = inputGridTable.querySelector('thead');
+        const tbody = inputGridTable.querySelector('tbody');
+        thead.innerHTML = '';
+        tbody.innerHTML = '';
+
+        // Header
+        const headerRow = document.createElement('tr');
+        const cornerTh = document.createElement('th');
+        cornerTh.textContent = "Volume \\ Growth";
+        headerRow.appendChild(cornerTh);
+
+        growthBins.forEach(bin => {
+            const th = document.createElement('th');
+            const lower = (bin[0] * 100).toFixed(0);
+            const upper = bin[1] === 'inf' ? '+' : (bin[1] * 100).toFixed(0) + '%';
+            th.textContent = `${lower}% - ${upper}`;
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+
+        // Rows
+        volumeBins.forEach((vBin, rIdx) => {
+            const tr = document.createElement('tr');
+            const th = document.createElement('th');
+            const lower = vBin[0].toLocaleString();
+            const upper = vBin[1] === 'inf' ? '+' : vBin[1].toLocaleString();
+            th.textContent = `${lower} - ${upper}`;
+            tr.appendChild(th);
+
+            growthBins.forEach((gBin, cIdx) => {
+                const td = document.createElement('td');
+                const input = document.createElement('input');
+                input.type = "text";
+                input.placeholder = "0%";
+                input.dataset.r = rIdx;
+                input.dataset.c = cIdx;
+                td.appendChild(input);
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+    });
+
+    calcStaticBtn.addEventListener('click', async () => {
+        // Gather Inputs
+        let volumeBins, growthBins;
+        try {
+            volumeBins = parseBins(volBinsInput.value, true);
+            growthBins = parseBins(growthBinsInput.value, false);
+        } catch (e) {
+            alert("Invalid Bin Inputs");
+            return;
+        }
+
+        // Gather Grid Data
+        const inputs = inputGridTable.querySelectorAll('input');
+        if (inputs.length === 0) {
+            alert("Please generate the grid first.");
+            return;
+        }
+
+        const rows = volumeBins.length;
+        const cols = growthBins.length;
+        const grid = Array(rows).fill().map(() => Array(cols).fill(0));
+
+        inputs.forEach(input => {
+            const r = parseInt(input.dataset.r);
+            const c = parseInt(input.dataset.c);
+            let val = input.value.trim();
+            if (val.includes('%')) {
+                val = parseFloat(val.replace('%', '')) / 100;
+            } else {
+                val = parseFloat(val);
+            }
+            if (isNaN(val)) val = 0;
+            grid[r][c] = val;
+        });
+
+        // Send to Backend
+        calcStaticBtn.textContent = "Calculating...";
+        calcStaticBtn.disabled = true;
+
+        try {
+            const response = await fetch('/calculate_static', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    volume_bins: volumeBins,
+                    growth_bins: growthBins,
+                    rebate_grid: grid
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('static-revenue').textContent = formatCurrency(data.total_revenue);
+                document.getElementById('static-cost').textContent = formatCurrency(data.total_rebate);
+                document.getElementById('static-avg-rate').textContent = (data.avg_rate * 100).toFixed(2) + '%';
+            } else {
+                alert("Error: " + data.error);
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert("Network Error");
+        } finally {
+            calcStaticBtn.textContent = "Calculate Cost";
+            calcStaticBtn.disabled = false;
+        }
+    });
+
     function renderResults(data) {
         // Update KPIs
         document.getElementById('max-revenue').textContent = formatCurrency(data.max_revenue);

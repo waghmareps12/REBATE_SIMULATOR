@@ -52,40 +52,89 @@
                 <div class="status" id="status-indicator">Ready</div>
             </header>
 
-            <!-- KPI Cards -->
-            <div class="kpi-grid">
-                <div class="card kpi-card">
-                    <h3>Projected Revenue</h3>
-                    <div class="value" id="max-revenue">$0</div>
-                    <div class="subtext">Optimized Scenario</div>
+            <div class="main-content">
+                <!-- Tabs -->
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="optimizer">Optimizer</button>
+                    <button class="tab-btn" data-tab="calculator">Static Calculator</button>
                 </div>
-                <div class="card kpi-card">
-                    <h3>Baseline Revenue</h3>
-                    <div class="value" id="baseline-revenue">$0</div>
-                    <div class="subtext">Current State</div>
-                </div>
-                <div class="card kpi-card highlight">
-                    <h3>Revenue Uplift</h3>
-                    <div class="value" id="revenue-uplift">$0</div>
-                    <div class="subtext">Net Gain</div>
-                </div>
-            </div>
 
-            <!-- Rebate Grid -->
-            <div class="card grid-card">
-                <h3>Optimized Rebate Grid</h3>
-                <div class="table-wrapper">
-                    <table id="results-table">
-                        <thead>
-                            <!-- Injected by JS -->
-                        </thead>
-                        <tbody>
-                            <!-- Injected by JS -->
-                        </tbody>
-                    </table>
+                <!-- Optimizer Tab -->
+                <div id="optimizer" class="tab-content active">
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <h3>Projected Revenue</h3>
+                            <div class="value" id="max-revenue">$0</div>
+                            <div class="subtitle">Optimized Scenario</div>
+                        </div>
+                        <div class="kpi-card">
+                            <h3>Baseline Revenue</h3>
+                            <div class="value" id="baseline-revenue">$0</div>
+                            <div class="subtitle">Current State</div>
+                        </div>
+                        <div class="kpi-card">
+                            <h3>Revenue Uplift</h3>
+                            <div class="value highlight" id="revenue-uplift">$0</div>
+                            <div class="subtitle">Net Gain</div>
+                        </div>
+                    </div>
+
+                    <div class="results-section">
+                        <h3>Optimized Rebate Grid</h3>
+                        <div class="table-container">
+                            <table id="results-table">
+                                <thead>
+                                    <!-- Headers injected by JS -->
+                                </thead>
+                                <tbody>
+                                    <!-- Rows injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calculator Tab -->
+                <div id="calculator" class="tab-content">
+                    <div class="control-panel" style="margin-bottom: 1rem;">
+                        <h3>Manual Grid Input</h3>
+                        <p class="help-text">Enter rebate percentages (e.g., 0.10 for 10%) for each tier.</p>
+                        <button id="generate-grid-btn" class="primary-btn"
+                            style="width: auto; margin-top: 0.5rem;">Generate/Reset Grid</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="input-grid-table">
+                            <thead>
+                                <!-- Headers injected by JS -->
+                            </thead>
+                            <tbody>
+                                <!-- Input Rows injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <button id="calc-static-btn" class="primary-btn" style="margin-top: 1rem;">Calculate Cost</button>
+
+                    <div class="kpi-grid" style="margin-top: 2rem;">
+                        <div class="kpi-card">
+                            <h3>Total Revenue</h3>
+                            <div class="value" id="static-revenue">$0</div>
+                            <div class="subtitle">Baseline</div>
+                        </div>
+                        <div class="kpi-card">
+                            <h3>Total Rebate Cost</h3>
+                            <div class="value" id="static-cost">$0</div>
+                            <div class="subtitle">Based on Input Grid</div>
+                        </div>
+                        <div class="kpi-card">
+                            <h3>Average Rate</h3>
+                            <div class="value highlight" id="static-avg-rate">0%</div>
+                            <div class="subtitle">Effective Rate</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </main>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>

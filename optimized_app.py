@@ -88,5 +88,83 @@ def optimize():
         print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/calculate_static', methods=['POST'])
+def calculate_static():
+    try:
+        data = request.get_json()
+        volume_bins = data.get('volume_bins')
+        growth_bins = data.get('growth_bins')
+        rebate_grid = data.get('rebate_grid') # List of lists matching the grid dimensions
+
+        if not volume_bins or not growth_bins or not rebate_grid:
+            return jsonify({"error": "Missing configuration"}), 400
+
+        # Use the optimizer's data loading logic to get a fresh copy
+        opt = get_optimizer()
+        df = opt.df_base.copy()
+        
+        # Ensure numeric
+        df['curryr_rev'] = pd.to_numeric(df['curryr_rev'], errors='coerce').fillna(0)
+        df['prevyr_rev'] = pd.to_numeric(df['prevyr_rev'], errors='coerce').fillna(0)
+        
+        # Calculate growth
+        df['growth'] = (df['curryr_rev'] - df['prevyr_rev']) / df['prevyr_rev']
+        df.replace([np.inf, -np.inf], 0, inplace=True)
+        df['growth'] = df['growth'].fillna(0)
+
+        # Create Bin Edges
+        # Convert frontend bins (lists) to edges
+        # volume_bins: [[5000, 15000], ...]
+        v_edges = [float(b[0]) for b in volume_bins]
+        last_v = volume_bins[-1][1]
+        v_edges.append(np.inf if last_v == 'inf' or last_v is None else float(last_v))
+        
+        g_edges = [float(b[0]) for b in growth_bins]
+        last_g = growth_bins[-1][1]
+        g_edges.append(np.inf if last_g == 'inf' or last_g is None else float(last_g))
+        
+        # Assign Tiers (Indices)
+        # We use pd.cut to get the index of the bin
+        df['v_idx'] = pd.cut(df['curryr_rev'], bins=v_edges, right=True, labels=False)
+        df['g_idx'] = pd.cut(df['growth'], bins=g_edges, right=False, labels=False)
+        
+        # Filter out records that don't fit in any bin (if any)
+        df = df.dropna(subset=['v_idx', 'g_idx'])
+        df['v_idx'] = df['v_idx'].astype(int)
+        df['g_idx'] = df['g_idx'].astype(int)
+
+        # Calculate Rebate
+        # rebate_grid is a list of lists: grid[row][col] -> grid[v_idx][g_idx]
+        # We can map it efficiently
+        
+        def get_rate(row):
+            try:
+                # rebate_grid is row-major: grid[v_idx][g_idx]
+                val = rebate_grid[row['v_idx']][row['g_idx']]
+                # Handle string percentage input if necessary, but frontend should send floats
+                if isinstance(val, str):
+                    val = float(val.replace('%', '')) / 100.0
+                return float(val)
+            except:
+                return 0.0
+
+        df['rate'] = df.apply(get_rate, axis=1)
+        df['rebate_cost'] = df['curryr_rev'] * df['rate']
+        
+        total_revenue = df['curryr_rev'].sum()
+        total_rebate = df['rebate_cost'].sum()
+        avg_rate = (total_rebate / total_revenue) if total_revenue > 0 else 0
+        
+        return jsonify({
+            "total_revenue": total_revenue,
+            "total_rebate": total_rebate,
+            "avg_rate": avg_rate,
+            "message": "Calculation Successful"
+        })
+
+    except Exception as e:
+        print(f"Static Calc Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
