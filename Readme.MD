@@ -37,8 +37,9 @@ The optimizer balances two competing forces:
 
 It finds the "sweet spot" where the extra revenue outweighs the rebate cost.
 
-👉 **[Click here for a Step-by-Step Calculation Walkthrough](CALCULATION_WALKTHROUGH.md)**
-(This document explains the exact math and logic used by the program).
+👉 **[Click here for ML Model Walkthrough](CALCULATION_WALKTHROUGH.md)**
+👉 **[Click here for Standard Model Walkthrough](CALCULATION_WALKTHROUGH_STANDARD.md)**
+(These documents explain the exact math and logic used by the program).
 
 ## 📂 Project Structure
 
