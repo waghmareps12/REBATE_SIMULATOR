@@ -1,87 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rebate Program Simulator</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Custom CSS -->
+    <title>Rebate Optimizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
-    <div class="container-fluid mt-4">
-        <header class="text-center mb-4">
-            <h1>📊 Rebate Program Simulator</h1>
-            <p class="lead">An interactive tool to calculate and visualize rebate program costs.</p>
-        </header>
+    <div class="app-container">
+        <!-- Sidebar: Configuration -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h1>Rebate<span>Sim</span></h1>
+            </div>
 
-        <!-- Main Content -->
-        <div class="row">
-            <!-- Left Panel: Inputs -->
-            <div class="col-lg-4">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header">
-                        <h3>1. Upload Files</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label for="grid-file" class="form-label">Upload Rebate Grid CSV</label>
-                            <input class="form-control" type="file" id="grid-file" accept=".csv">
-                            <div class="form-text">First column: Volume bins. Headers: Growth bins. Cells: Rebate rates.</div>
-                        </div>
-                        <hr>
-                        <div class="mb-3">
-                            <label for="accounts-file" class="form-label">Upload Accounts CSV</label>
-                            <input class="form-control" type="file" id="accounts-file" accept=".csv">
-                             <div class="form-text">Columns: `rfp_group`, `rfp_name`, `curryr_rev`, `prevyr_rev`.</div>
-                        </div>
-                    </div>
+            <div class="config-section">
+                <h2>Optimization Settings</h2>
+
+                <div class="control-group">
+                    <label for="elasticity">Revenue Elasticity</label>
+                    <input type="range" id="elasticity" min="0.1" max="5.0" step="0.1" value="2.0">
+                    <span id="elasticity-val">2.0</span>
+                    <p class="help-text">Higher elasticity = Rebates drive more growth.</p>
                 </div>
 
-                <div class="card shadow-sm">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h3 class="mb-0">2. Rebate Grid</h3>
-                        <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn btn-outline-success" id="add-row">+ Row</button>
-                            <button type="button" class="btn btn-outline-danger" id="remove-row">- Row</button>
-                            <button type="button" class="btn btn-outline-success" id="add-col">+ Col</button>
-                            <button type="button" class="btn btn-outline-danger" id="remove-col">- Col</button>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div id="grid-display" class="table-responsive"></div>
-                    </div>
+                <div class="control-group">
+                    <label>Volume Thresholds</label>
+                    <div class="help-text">Enter comma-separated values (e.g., 5000, 15000, 30000, 50000)</div>
+                    <input type="text" id="vol-bins-input" class="text-input" value="5000, 15000, 30000, 50000">
+                </div>
+
+                <div class="control-group">
+                    <label>Growth Thresholds</label>
+                    <div class="help-text">Enter comma-separated decimals (e.g., 0.08, 0.15, 0.20)</div>
+                    <input type="text" id="growth-bins-input" class="text-input" value="0.08, 0.15, 0.20">
+                </div>
+
+                <button id="run-btn" class="primary-btn">Run Optimization</button>
+            </div>
+        </aside>
+
+        <!-- Main Content: Results -->
+        <main class="main-content">
+            <header>
+                <h2>Simulation Results</h2>
+                <div class="status" id="status-indicator">Ready</div>
+            </header>
+
+            <!-- KPI Cards -->
+            <div class="kpi-grid">
+                <div class="card kpi-card">
+                    <h3>Projected Revenue</h3>
+                    <div class="value" id="max-revenue">$0</div>
+                    <div class="subtext">Optimized Scenario</div>
+                </div>
+                <div class="card kpi-card">
+                    <h3>Baseline Revenue</h3>
+                    <div class="value" id="baseline-revenue">$0</div>
+                    <div class="subtext">Current State</div>
+                </div>
+                <div class="card kpi-card highlight">
+                    <h3>Revenue Uplift</h3>
+                    <div class="value" id="revenue-uplift">$0</div>
+                    <div class="subtext">Net Gain</div>
                 </div>
             </div>
 
-            <!-- Right Panel: Outputs -->
-            <div class="col-lg-8">
-                <div class="card shadow-sm">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h3>3. Calculated Rebates</h3>
-                        <div id="total-rebate-display" class="fs-4 fw-bold"></div>
-                    </div>
-                    <div class="card-body">
-                        <div id="results-table" class="table-responsive"></div>
-                    </div>
-                </div>
-
-                <div class="card shadow-sm mt-4">
-                    <div class="card-header">
-                        <h3>4. Tier Summary</h3>
-                    </div>
-                    <div class="card-body">
-                        <div id="summary-table" class="table-responsive"></div>
-                    </div>
+            <!-- Rebate Grid -->
+            <div class="card grid-card">
+                <h3>Optimized Rebate Grid</h3>
+                <div class="table-wrapper">
+                    <table id="results-table">
+                        <thead>
+                            <!-- Injected by JS -->
+                        </thead>
+                        <tbody>
+                            <!-- Injected by JS -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
 
-    <!-- PapaParse for CSV parsing -->
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
-    <!-- Custom JS -->
-    <script src="{{ url_for('static', filename='main.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+
 </html>
