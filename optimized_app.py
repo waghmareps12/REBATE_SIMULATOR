@@ -2,11 +2,13 @@ from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import numpy as np
 from Optimized_Rebate_Simulator import RebateOptimizer
+from ML_Rebate_Optimizer import MLRebateOptimizer
 
 app = Flask(__name__)
 
-# Global Optimizer Instance (Lazy loaded)
+# Global Optimizer Instances (Lazy loaded)
 optimizer = None
+ml_optimizer = None
 DATA_FILE = "DummyDataGpot2.csv"
 
 def get_optimizer():
@@ -15,6 +17,12 @@ def get_optimizer():
         # Default elasticity, can be overridden per request
         optimizer = RebateOptimizer(DATA_FILE, elasticity=2.0)
     return optimizer
+
+def get_ml_optimizer():
+    global ml_optimizer
+    if ml_optimizer is None:
+        ml_optimizer = MLRebateOptimizer(DATA_FILE)
+    return ml_optimizer
 
 @app.route('/')
 def index():
@@ -27,6 +35,7 @@ def optimize():
         
         # Extract parameters
         elasticity = float(data.get('elasticity', 2.0))
+        use_ml_elasticity = data.get('use_ml_elasticity', False)
         
         # Parse bins from frontend
         # Expected format: volume_bins=[[5000, 15000], ...], growth_bins=[[0, 0.08], ...]
@@ -45,8 +54,13 @@ def optimize():
             growth_bins.append((float(b[0]), upper))
             
         # Run Optimization
-        opt = get_optimizer()
-        opt.elasticity = elasticity
+        if use_ml_elasticity:
+            opt = get_ml_optimizer()
+            # ML optimizer doesn't need explicit elasticity, it uses the model
+        else:
+            opt = get_optimizer()
+            opt.elasticity = elasticity
+            
         opt.set_bins(volume_bins, growth_bins)
         
         best_grid, max_revenue = opt.optimize()

@@ -41,9 +41,26 @@ document.addEventListener('DOMContentLoaded', () => {
         return bins;
     }
 
+    // --- Elasticity Toggle Logic ---
+    const elasticityRadios = document.getElementsByName('elasticity-mode');
+    const manualElasticityGroup = document.getElementById('manual-elasticity-group');
+
+    elasticityRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (e.target.value === 'ml') {
+                manualElasticityGroup.style.opacity = '0.5';
+                manualElasticityGroup.style.pointerEvents = 'none';
+            } else {
+                manualElasticityGroup.style.opacity = '1';
+                manualElasticityGroup.style.pointerEvents = 'auto';
+            }
+        });
+    });
+
     // Run Optimization
     runBtn.addEventListener('click', async () => {
         const elasticity = parseFloat(elasticityInput.value);
+        const useMlElasticity = document.querySelector('input[name="elasticity-mode"]:checked').value === 'ml';
 
         // Parse Bins
         let volumeBins, growthBins;
@@ -72,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: JSON.stringify({
                     elasticity: elasticity,
+                    use_ml_elasticity: useMlElasticity,
                     volume_bins: volumeBins,
                     growth_bins: growthBins
                 })

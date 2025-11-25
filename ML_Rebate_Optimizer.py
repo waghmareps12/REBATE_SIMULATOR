@@ -180,7 +180,7 @@ class MLRebateOptimizer:
             method='trust-constr',
             bounds=bounds,
             constraints=constraints_arg,
-            options={'verbose': 1, 'maxiter': 1000}
+            options={'verbose': 1, 'maxiter': 10000}
         )
         
         if result.success:
