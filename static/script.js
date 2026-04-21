@@ -262,9 +262,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update KPIs
         document.getElementById('max-revenue').textContent = formatCurrency(data.max_revenue);
         document.getElementById('baseline-revenue').textContent = formatCurrency(data.baseline_revenue);
+        document.getElementById('total-rebate').textContent = formatCurrency(data.total_rebate);
         document.getElementById('revenue-uplift').textContent = "+ " + formatCurrency(data.uplift);
 
-        // Render Table
+        // --- Render Rebate Grid ---
         const tableHead = document.querySelector('#results-table thead');
         const tableBody = document.querySelector('#results-table tbody');
 
@@ -301,6 +302,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 tr.appendChild(td);
             });
             tableBody.appendChild(tr);
+        });
+
+        // --- Render Summary Table ---
+        const summaryHead = document.querySelector('#summary-table thead');
+        const summaryBody = document.querySelector('#summary-table tbody');
+
+        summaryHead.innerHTML = '';
+        summaryBody.innerHTML = '';
+
+        // Header (Same as rebate grid)
+        const summaryHeaderRow = document.createElement('tr');
+        data.grid_headers.forEach(text => {
+            const th = document.createElement('th');
+            th.textContent = text;
+            summaryHeaderRow.appendChild(th);
+        });
+        summaryHead.appendChild(summaryHeaderRow);
+
+        // Rows
+        data.summary_rows.forEach(rowData => {
+            const tr = document.createElement('tr');
+            rowData.forEach((cellData, index) => {
+                const td = document.createElement('td');
+                td.textContent = cellData;
+                td.style.fontSize = '0.8rem'; // Slightly smaller font for dense info
+                tr.appendChild(td);
+            });
+            summaryBody.appendChild(tr);
         });
     }
 
