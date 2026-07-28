@@ -1,50 +1,58 @@
-# ML-Based Rebate Simulator
+# Constraint-Based Rebate Contract Designer
 
-A powerful, AI-driven tool to optimize customer rebate grids. This application uses Machine Learning to predict how rebates drive revenue growth and finds the optimal rebate structure to maximize **Net Profit**.
+This project designs a prospective quarterly rebate contract using explicit business
+assumptions and enforceable grid constraints. It does **not** claim that historical
+rebates caused the observed growth.
 
-## 🚀 Key Features
+## Contract model
 
-*   **ML Elasticity Model**: Automatically trains a Linear Regression model on your data to predict the "elasticity" of your customers (how much they grow when given a rebate).
-*   **Mathematical Optimization**: Uses `scipy.optimize` (Trust-Constr method) to find the mathematical maximum for Net Revenue.
-*   **Dynamic Configuration**:
-    *   Define your own **Volume** and **Growth** tiers on the fly.
-    *   Adjust **Elasticity** assumptions manually or let the ML model decide.
-*   **Strict Business Rules**:
-    *   **0% Rebate** for low-growth customers (<8%).
-    *   **Monotonicity**: Rebates always increase with higher volume/growth.
-    *   **Bounds**: Rates capped between 1% and 15%.
+- Account identity: `(rfp_name, rfp_group)`.
+- Baseline: eligible revenue from the same quarter in the prior year.
+- Qualification: the highest inclusive volume and growth milestones achieved.
+- Default payout: earned rate multiplied by incremental revenue above baseline.
+- Below either minimum milestone: 0% rebate.
+- New accounts or nonpositive baselines: excluded for a separate acquisition program.
 
-## 🛠️ How to Run
+The optimizer maximizes base-scenario net revenue while enforcing:
 
-1.  **Install Dependencies**:
-    ```bash
-    pip install pandas numpy scipy scikit-learn flask
-    ```
+- rates from 1% through 15% in whole percentage points;
+- at least a one-point increase between adjacent paid cells;
+- at least 30 accounts and 1% of eligible revenue per cell;
+- an optional total payout budget;
+- low-scenario net revenue no worse than the no-program baseline; and
+- a post-solve tier-migration financial-impact check.
 
-2.  **Start the Application**:
-    ```bash
-    python optimized_app.py
-    ```
+Thresholds entered in the UI are assessed alongside a small set of rounded,
+data-supported candidates. Rejected candidates remain visible with their reasons.
 
-3.  **Open in Browser**:
-    Go to [http://127.0.0.1:5000](http://127.0.0.1:5000)
+## Run
 
-## 📚 How It Works
+```powershell
+python -m pip install -r requirements.txt
+python optimized_app.py
+```
 
-The optimizer balances two competing forces:
-1.  **Cost**: Higher rebates cost more money.
-2.  **Growth**: Higher rebates drive more revenue (predicted by ML).
+Open <http://127.0.0.1:5000>.
 
-It finds the "sweet spot" where the extra revenue outweighs the rebate cost.
+## Verify
 
-👉 **[Click here for ML Model Walkthrough](CALCULATION_WALKTHROUGH.md)**
-👉 **[Click here for Standard Model Walkthrough](CALCULATION_WALKTHROUGH_STANDARD.md)**
-(These documents explain the exact math and logic used by the program).
+```powershell
+python -m unittest discover -s tests -v
+```
 
-## 📂 Project Structure
+The suite covers contract boundaries, payout calculations, account aggregation,
+exclusion reconciliation, constraint feasibility, MILP-versus-exhaustive optimality,
+API validation, deterministic full-data execution, and the degeneracy of the legacy
+objectives.
 
-*   `optimized_app.py`: The Flask backend that runs the UI and connects to the optimizer.
-*   `ML_Rebate_Optimizer.py`: The core logic containing the ML model and optimization algorithms.
-*   `templates/index.html`: The modern, dark-mode user interface.
-*   `static/`: CSS and JavaScript files for the frontend.
-*   `DummyDataGpot2.csv`: The input dataset.
+## Project structure
+
+- `rebate_contract.py`: shared contract, data, scenario, simulation, and MILP engine.
+- `optimized_app.py`: thin Flask API and application entry point.
+- `templates/index.html`, `static/`: contract configuration and result diagnostics.
+- `Constraint_Based_Rebate_Walkthrough.ipynb`: validation walkthrough that imports the
+  shared engine instead of copying formulas.
+- `Optimized_Rebate_Simulator.py`, `ML_Rebate_Optimizer.py`, and
+  `Brute_Force_Optimizer.ipynb`: retained as legacy experiments for comparison only.
+
+The untracked `CC/` directory is intentionally untouched.

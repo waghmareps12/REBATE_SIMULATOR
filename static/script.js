@@ -1,343 +1,238 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const elasticityInput = document.getElementById('elasticity');
-    const elasticityVal = document.getElementById('elasticity-val');
-    const volBinsInput = document.getElementById('vol-bins-input');
-    const growthBinsInput = document.getElementById('growth-bins-input');
-    const runBtn = document.getElementById('run-btn');
-    const statusIndicator = document.getElementById('status-indicator');
+    const $ = (selector) => document.querySelector(selector);
+    const runButton = $('#run-btn');
+    const status = $('#status-indicator');
+    const errorPanel = $('#error-panel');
+    const warningPanel = $('#warning-panel');
 
-    // Update slider value display
-    elasticityInput.addEventListener('input', (e) => {
-        elasticityVal.textContent = e.target.value;
-    });
-
-    // Helper to parse bins from string
-    function parseBins(inputStr, isVolume) {
-        if (!inputStr) return [];
-        const values = inputStr.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
-        values.sort((a, b) => a - b);
-
-        const bins = [];
-
-        // Add catch-all for lower bound if needed
-        if (values.length > 0) {
-            const firstVal = values[0];
-            if (isVolume) {
-                // For volume, if start > 0, add [0, start]
-                if (firstVal > 0) {
-                    bins.push([0, firstVal]);
-                }
-            } else {
-                // For growth, always add [-inf, start] to catch low/negative growth
-                bins.push(['-inf', firstVal]);
-            }
+    function parseNumberList(value, divisor = 1) {
+        const numbers = value.split(',')
+            .map((item) => Number(item.trim()) / divisor)
+            .filter(Number.isFinite);
+        if (!numbers.length || numbers.some((item, index) => index > 0 && item <= numbers[index - 1])) {
+            throw new Error('Milestones must be comma-separated numbers in increasing order.');
         }
-
-        for (let i = 0; i < values.length; i++) {
-            const lower = values[i];
-            const upper = (i === values.length - 1) ? 'inf' : values[i + 1];
-            bins.push([lower, upper]);
-        }
-        return bins;
+        return numbers;
     }
 
-    // --- Elasticity Toggle Logic ---
-    const elasticityRadios = document.getElementsByName('elasticity-mode');
-    const manualElasticityGroup = document.getElementById('manual-elasticity-group');
-
-    elasticityRadios.forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            if (e.target.value === 'ml') {
-                manualElasticityGroup.style.opacity = '0.5';
-                manualElasticityGroup.style.pointerEvents = 'none';
-            } else {
-                manualElasticityGroup.style.opacity = '1';
-                manualElasticityGroup.style.pointerEvents = 'auto';
-            }
-        });
-    });
-
-    // Run Optimization
-    runBtn.addEventListener('click', async () => {
-        const elasticity = parseFloat(elasticityInput.value);
-        const useMlElasticity = document.querySelector('input[name="elasticity-mode"]:checked').value === 'ml';
-
-        // Parse Bins
-        let volumeBins, growthBins;
-        try {
-            volumeBins = parseBins(volBinsInput.value, true);
-            growthBins = parseBins(growthBinsInput.value, false);
-
-            if (volumeBins.length === 0 || growthBins.length === 0) {
-                throw new Error("Invalid bin configuration");
-            }
-        } catch (e) {
-            statusIndicator.textContent = "Error: Invalid Bin Inputs";
-            return;
-        }
-
-        // UI State: Loading
-        runBtn.disabled = true;
-        runBtn.textContent = "Optimizing...";
-        statusIndicator.textContent = "Running Simulation...";
-
-        try {
-            const response = await fetch('/optimize', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    elasticity: elasticity,
-                    use_ml_elasticity: useMlElasticity,
-                    volume_bins: volumeBins,
-                    growth_bins: growthBins
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                renderResults(data);
-                statusIndicator.textContent = "Optimization Complete";
-            } else {
-                statusIndicator.textContent = "Error: " + data.error;
-            }
-
-        } catch (error) {
-            console.error('Error:', error);
-            statusIndicator.textContent = "Network Error";
-        } finally {
-            runBtn.disabled = false;
-            runBtn.textContent = "Run Optimization";
-        }
-    });
-
-    // --- Tab Switching ---
-    const tabs = document.querySelectorAll('.tab-btn');
-    const contents = document.querySelectorAll('.tab-content');
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            // Remove active class
-            tabs.forEach(t => t.classList.remove('active'));
-            contents.forEach(c => c.classList.remove('active'));
-
-            // Add active class
-            tab.classList.add('active');
-            document.getElementById(tab.dataset.tab).classList.add('active');
-        });
-    });
-
-    // --- Static Calculator Logic ---
-    const generateGridBtn = document.getElementById('generate-grid-btn');
-    const calcStaticBtn = document.getElementById('calc-static-btn');
-    const inputGridTable = document.getElementById('input-grid-table');
-
-    generateGridBtn.addEventListener('click', () => {
-        // Parse bins
-        let volumeBins, growthBins;
-        try {
-            volumeBins = parseBins(volBinsInput.value, true);
-            growthBins = parseBins(growthBinsInput.value, false);
-        } catch (e) {
-            alert("Invalid Bin Inputs");
-            return;
-        }
-
-        // Render Input Table
-        const thead = inputGridTable.querySelector('thead');
-        const tbody = inputGridTable.querySelector('tbody');
-        thead.innerHTML = '';
-        tbody.innerHTML = '';
-
-        // Header
-        const headerRow = document.createElement('tr');
-        const cornerTh = document.createElement('th');
-        cornerTh.textContent = "Volume \\ Growth";
-        headerRow.appendChild(cornerTh);
-
-        growthBins.forEach(bin => {
-            const th = document.createElement('th');
-            const lower = (bin[0] * 100).toFixed(0);
-            const upper = bin[1] === 'inf' ? '+' : (bin[1] * 100).toFixed(0) + '%';
-            th.textContent = `${lower}% - ${upper}`;
-            headerRow.appendChild(th);
-        });
-        thead.appendChild(headerRow);
-
-        // Rows
-        volumeBins.forEach((vBin, rIdx) => {
-            const tr = document.createElement('tr');
-            const th = document.createElement('th');
-            const lower = vBin[0].toLocaleString();
-            const upper = vBin[1] === 'inf' ? '+' : vBin[1].toLocaleString();
-            th.textContent = `${lower} - ${upper}`;
-            tr.appendChild(th);
-
-            growthBins.forEach((gBin, cIdx) => {
-                const td = document.createElement('td');
-                const input = document.createElement('input');
-                input.type = "text";
-                input.placeholder = "0%";
-                input.dataset.r = rIdx;
-                input.dataset.c = cIdx;
-                td.appendChild(input);
-                tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
-        });
-    });
-
-    calcStaticBtn.addEventListener('click', async () => {
-        // Gather Inputs
-        let volumeBins, growthBins;
-        try {
-            volumeBins = parseBins(volBinsInput.value, true);
-            growthBins = parseBins(growthBinsInput.value, false);
-        } catch (e) {
-            alert("Invalid Bin Inputs");
-            return;
-        }
-
-        // Gather Grid Data
-        const inputs = inputGridTable.querySelectorAll('input');
-        if (inputs.length === 0) {
-            alert("Please generate the grid first.");
-            return;
-        }
-
-        const rows = volumeBins.length;
-        const cols = growthBins.length;
-        const grid = Array(rows).fill().map(() => Array(cols).fill(0));
-
-        inputs.forEach(input => {
-            const r = parseInt(input.dataset.r);
-            const c = parseInt(input.dataset.c);
-            let val = input.value.trim();
-            if (val.includes('%')) {
-                val = parseFloat(val.replace('%', '')) / 100;
-            } else {
-                val = parseFloat(val);
-            }
-            if (isNaN(val)) val = 0;
-            grid[r][c] = val;
-        });
-
-        // Send to Backend
-        calcStaticBtn.textContent = "Calculating...";
-        calcStaticBtn.disabled = true;
-
-        try {
-            const response = await fetch('/calculate_static', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    volume_bins: volumeBins,
-                    growth_bins: growthBins,
-                    rebate_grid: grid
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                document.getElementById('static-revenue').textContent = formatCurrency(data.total_revenue);
-                document.getElementById('static-cost').textContent = formatCurrency(data.total_rebate);
-                document.getElementById('static-avg-rate').textContent = (data.avg_rate * 100).toFixed(2) + '%';
-            } else {
-                alert("Error: " + data.error);
-            }
-
-        } catch (e) {
-            console.error(e);
-            alert("Network Error");
-        } finally {
-            calcStaticBtn.textContent = "Calculate Cost";
-            calcStaticBtn.disabled = false;
-        }
-    });
-
-    function renderResults(data) {
-        // Update KPIs
-        document.getElementById('max-revenue').textContent = formatCurrency(data.max_revenue);
-        document.getElementById('baseline-revenue').textContent = formatCurrency(data.baseline_revenue);
-        document.getElementById('total-rebate').textContent = formatCurrency(data.total_rebate);
-        document.getElementById('revenue-uplift').textContent = "+ " + formatCurrency(data.uplift);
-
-        // --- Render Rebate Grid ---
-        const tableHead = document.querySelector('#results-table thead');
-        const tableBody = document.querySelector('#results-table tbody');
-
-        // Clear existing
-        tableHead.innerHTML = '';
-        tableBody.innerHTML = '';
-
-        // Header
-        const headerRow = document.createElement('tr');
-        data.grid_headers.forEach(text => {
-            const th = document.createElement('th');
-            th.textContent = text;
-            headerRow.appendChild(th);
-        });
-        tableHead.appendChild(headerRow);
-
-        // Rows
-        data.grid_rows.forEach(rowData => {
-            const tr = document.createElement('tr');
-            rowData.forEach((cellData, index) => {
-                const td = document.createElement('td');
-                td.textContent = cellData;
-
-                // Add color intensity for rebate cells (skip first column)
-                if (index > 0) {
-                    const val = parseFloat(cellData.replace('%', ''));
-                    if (val > 0) {
-                        td.style.color = `rgba(16, 185, 129, ${0.5 + val / 30})`; // Green tint based on value
-                    } else {
-                        td.style.color = '#94a3b8'; // Gray for 0
-                    }
-                }
-
-                tr.appendChild(td);
-            });
-            tableBody.appendChild(tr);
-        });
-
-        // --- Render Summary Table ---
-        const summaryHead = document.querySelector('#summary-table thead');
-        const summaryBody = document.querySelector('#summary-table tbody');
-
-        summaryHead.innerHTML = '';
-        summaryBody.innerHTML = '';
-
-        // Header (Same as rebate grid)
-        const summaryHeaderRow = document.createElement('tr');
-        data.grid_headers.forEach(text => {
-            const th = document.createElement('th');
-            th.textContent = text;
-            summaryHeaderRow.appendChild(th);
-        });
-        summaryHead.appendChild(summaryHeaderRow);
-
-        // Rows
-        data.summary_rows.forEach(rowData => {
-            const tr = document.createElement('tr');
-            rowData.forEach((cellData, index) => {
-                const td = document.createElement('td');
-                td.textContent = cellData;
-                td.style.fontSize = '0.8rem'; // Slightly smaller font for dense info
-                tr.appendChild(td);
-            });
-            summaryBody.appendChild(tr);
-        });
+    function requestPayload() {
+        const budgetText = $('#budget').value.trim();
+        return {
+            volume_milestones: parseNumberList($('#vol-milestones').value),
+            growth_milestones: parseNumberList($('#growth-milestones').value, 100),
+            payout_basis: $('#payout-basis').value,
+            budget: budgetText ? Number(budgetText.replace(/[$,]/g, '')) : null,
+            include_auto_candidates: $('#auto-candidates').checked,
+            scenarios: {
+                low: Number($('#elasticity-low').value),
+                base: Number($('#elasticity-base').value),
+                high: Number($('#elasticity-high').value),
+            },
+        };
     }
 
-    function formatCurrency(value) {
+    function money(value) {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
-            maximumFractionDigits: 0
+            maximumFractionDigits: 0,
         }).format(value);
     }
+
+    function percent(value, digits = 1) {
+        return `${(value * 100).toFixed(digits)}%`;
+    }
+
+    function milestoneLabels(values, formatter) {
+        return values.map((value, index) => {
+            const upper = values[index + 1];
+            return upper === undefined
+                ? `${formatter(value)}+`
+                : `${formatter(value)}–${formatter(upper)}`;
+        });
+    }
+
+    function clearMessage(panel) {
+        panel.classList.add('hidden');
+        panel.textContent = '';
+    }
+
+    function showMessage(panel, messages) {
+        if (!messages || !messages.length) return clearMessage(panel);
+        panel.textContent = messages.join(' ');
+        panel.classList.remove('hidden');
+    }
+
+    function renderGrid(data) {
+        const headers = milestoneLabels(data.program.volume_milestones, (value) => money(value));
+        const rowLabels = milestoneLabels(data.program.growth_milestones, (value) => percent(value, 0));
+        const head = $('#results-table thead');
+        const body = $('#results-table tbody');
+        head.innerHTML = `<tr><th>Growth \\ Volume</th>${headers.map((h) => `<th>${h}</th>`).join('')}</tr>`;
+        body.innerHTML = data.rates.map((row, rowIndex) => (
+            `<tr><th>${rowLabels[rowIndex]}</th>${row.map((rate) => `<td class="rate-cell">${percent(rate, 0)}</td>`).join('')}</tr>`
+        )).join('');
+    }
+
+    function renderCoverage(data) {
+        const headers = milestoneLabels(data.program.volume_milestones, (value) => money(value));
+        const rowLabels = milestoneLabels(data.program.growth_milestones, (value) => percent(value, 0));
+        $('#coverage-table thead').innerHTML =
+            `<tr><th>Growth \\ Volume</th>${headers.map((h) => `<th>${h}</th>`).join('')}</tr>`;
+        $('#coverage-table tbody').innerHTML = data.cell_counts.map((row, g) => (
+            `<tr><th>${rowLabels[g]}</th>${row.map((count, v) => (
+                `<td><strong>${count.toLocaleString()} accounts</strong><br><span class="muted">${money(data.cell_revenue[g][v])}</span></td>`
+            )).join('')}</tr>`
+        )).join('');
+    }
+
+    function renderScenarios(data) {
+        const order = ['no_program', 'low', 'base', 'high'];
+        $('#scenario-table tbody').innerHTML = order.map((name) => {
+            const item = data.scenarios[name];
+            const label = name.replace('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+            return `<tr>
+                <th>${label}</th>
+                <td>${money(item.projected_revenue)}</td>
+                <td>${money(item.payout)}</td>
+                <td>${money(item.net_revenue)}</td>
+                <td class="${item.uplift_vs_no_program >= 0 ? 'positive' : 'negative'}">${money(item.uplift_vs_no_program)}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    function renderCandidates(data) {
+        $('#candidate-list').innerHTML = data.candidate_assessments.map((candidate) => {
+            const detail = candidate.accepted
+                ? 'Passed coverage, solver, and stability checks.'
+                : candidate.reasons.slice(0, 2).join(' ');
+            return `<article class="candidate-row">
+                <span class="candidate-state ${candidate.accepted ? 'pass' : 'fail'}">${candidate.accepted ? 'Pass' : 'Rejected'}</span>
+                <div><strong>${candidate.name.replaceAll('_', ' ')}</strong><p>${detail}</p></div>
+            </article>`;
+        }).join('');
+    }
+
+    function renderReconciliation(data) {
+        const items = {
+            'Source rows': data.reconciliation.source_rows,
+            'Aggregated accounts': data.reconciliation.aggregated_accounts,
+            'Invalid identifier rows': data.reconciliation.invalid_identifier_rows,
+            'Invalid revenue rows': data.reconciliation.invalid_revenue_rows,
+            'Eligible accounts': data.exclusion_counts.eligible,
+            'New / nonpositive baseline': data.exclusion_counts.new_or_nonpositive_baseline,
+            'Negative / invalid forecast': data.exclusion_counts.negative_or_invalid_forecast,
+            'Below volume minimum': data.exclusion_counts.below_volume_milestone,
+            'Below growth minimum': data.exclusion_counts.below_growth_milestone,
+        };
+        $('#reconciliation').innerHTML = Object.entries(items)
+            .map(([label, value]) => `<div><span>${label}</span><strong>${Number(value).toLocaleString()}</strong></div>`)
+            .join('');
+    }
+
+    function renderResult(data) {
+        const base = data.scenarios.base;
+        $('#base-net').textContent = money(base.net_revenue);
+        $('#base-uplift').textContent = money(base.uplift_vs_no_program);
+        $('#base-payout').textContent = money(base.payout);
+        $('#eligible-accounts').textContent = data.exclusion_counts.eligible.toLocaleString();
+        $('#coverage-subtitle').textContent = `${data.reconciliation.source_rows.toLocaleString()} source rows reconciled`;
+        $('#selected-candidate').textContent = data.program.name.replaceAll('_', ' ');
+        $('#migration-badge').textContent =
+            `${percent(data.migration.migrated_share)} moved · ${percent(data.migration.net_impact_share || 0)} net impact`;
+        $('#contract-list').innerHTML = data.contract.map((line) => `<li>${line}</li>`).join('');
+        showMessage(warningPanel, data.warnings);
+        renderGrid(data);
+        renderCoverage(data);
+        renderScenarios(data);
+        renderCandidates(data);
+        renderReconciliation(data);
+    }
+
+    runButton.addEventListener('click', async () => {
+        clearMessage(errorPanel);
+        clearMessage(warningPanel);
+        runButton.disabled = true;
+        runButton.textContent = 'Designing…';
+        status.textContent = 'Validating candidates and solving rates…';
+        try {
+            const response = await fetch('/optimize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestPayload()),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Optimization failed.');
+            renderResult(data);
+            status.textContent = 'Contract design complete';
+        } catch (error) {
+            showMessage(errorPanel, [error.message]);
+            status.textContent = 'Could not produce a feasible contract';
+        } finally {
+            runButton.disabled = false;
+            runButton.textContent = 'Design contract';
+        }
+    });
+
+    document.querySelectorAll('.tab-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach((item) => item.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach((item) => item.classList.remove('active'));
+            button.classList.add('active');
+            $(`#${button.dataset.tab}`).classList.add('active');
+        });
+    });
+
+    function buildManualGrid() {
+        const volume = parseNumberList($('#vol-milestones').value);
+        const growth = parseNumberList($('#growth-milestones').value, 100);
+        const volumeLabels = milestoneLabels(volume, (value) => money(value));
+        const growthLabels = milestoneLabels(growth, (value) => percent(value, 0));
+        $('#input-grid-table thead').innerHTML =
+            `<tr><th>Growth \\ Volume</th>${volumeLabels.map((label) => `<th>${label}</th>`).join('')}</tr>`;
+        $('#input-grid-table tbody').innerHTML = growthLabels.map((label, g) => (
+            `<tr><th>${label}</th>${volume.map((_, v) => (
+                `<td><input class="rate-input" type="number" min="0" max="100" step="1" value="0" data-g="${g}" data-v="${v}" aria-label="${label}, ${volumeLabels[v]} rebate percent"></td>`
+            )).join('')}</tr>`
+        )).join('');
+    }
+
+    $('#generate-grid-btn').addEventListener('click', () => {
+        try {
+            buildManualGrid();
+        } catch (error) {
+            window.alert(error.message);
+        }
+    });
+
+    $('#calc-static-btn').addEventListener('click', async () => {
+        try {
+            const payload = requestPayload();
+            const growthCount = payload.growth_milestones.length;
+            const volumeCount = payload.volume_milestones.length;
+            const inputs = [...document.querySelectorAll('.rate-input')];
+            if (inputs.length !== growthCount * volumeCount) {
+                throw new Error('Generate the manual grid first.');
+            }
+            const rates = Array.from({ length: growthCount }, () => Array(volumeCount).fill(0));
+            inputs.forEach((input) => {
+                rates[Number(input.dataset.g)][Number(input.dataset.v)] = Number(input.value) / 100;
+            });
+            const response = await fetch('/calculate_static', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...payload, rates }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Calculation failed.');
+            $('#static-revenue').textContent = money(data.total_revenue);
+            $('#static-eligible-revenue').textContent = money(data.eligible_revenue);
+            $('#static-cost').textContent = money(data.total_payout);
+            $('#static-avg-rate').textContent = percent(data.effective_rate, 2);
+        } catch (error) {
+            window.alert(error.message);
+        }
+    });
+
+    buildManualGrid();
 });
