@@ -206,7 +206,7 @@ class RebateOptimizer:
 # === Main Execution ===
 if __name__ == "__main__":
     # Config
-    DATA_FILE = "DummyDataGpot2.csv"
+    DATA_FILE = r"C:\Users\750040697\OneDrive - Genpact\Documents\REBATE_SIMULATOR\REBATE_SIMULATOR\DummyDataGpot2.csv"
     
     # Define Bins (Same as Config 1 from original script)
     volume_bins = [(5000, 15000), (15000, 30000), (30000, 50000), (50000, np.inf)]
