@@ -4,149 +4,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rebate Optimizer</title>
+    <title>Rebate Contract Designer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
 <body>
     <div class="app-container">
-        <!-- Sidebar: Configuration -->
         <aside class="sidebar">
             <div class="logo">
                 <h1>Rebate<span>Sim</span></h1>
+                <p class="help-text">Constraint-based contract design</p>
             </div>
 
-            <div class="config-section">
-                <h2>Optimization Settings</h2>
+            <section class="config-section" aria-labelledby="contract-settings">
+                <h2 id="contract-settings">Contract settings</h2>
 
                 <div class="control-group">
-                    <label>Elasticity Source</label>
-                    <div class="toggle-group">
-                        <label class="radio-label">
-                            <input type="radio" name="elasticity-mode" value="manual" checked> Manual
+                    <label for="vol-milestones">Volume milestones ($)</label>
+                    <input class="text-input" id="vol-milestones" value="6500, 25000, 50000">
+                    <p class="help-text">Inclusive thresholds; highest achieved column wins.</p>
+                </div>
+
+                <div class="control-group">
+                    <label for="growth-milestones">Growth milestones (%)</label>
+                    <input class="text-input" id="growth-milestones" value="6, 10, 15, 20">
+                    <p class="help-text">Compared with the same quarter in the prior year.</p>
+                </div>
+
+                <div class="control-group">
+                    <label for="payout-basis">Payout basis</label>
+                    <select class="text-input" id="payout-basis">
+                        <option value="incremental">Incremental revenue</option>
+                        <option value="all_revenue">All quarterly revenue</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="budget">Maximum payout ($)</label>
+                    <input class="text-input" id="budget" inputmode="decimal" placeholder="Optional">
+                </div>
+
+                <div class="control-group">
+                    <label>Response scenarios</label>
+                    <div class="scenario-inputs">
+                        <label for="elasticity-low">Low
+                            <input id="elasticity-low" type="number" min="0" step="0.1" value="0.5">
                         </label>
-                        <label class="radio-label">
-                            <input type="radio" name="elasticity-mode" value="ml"> ML Model
+                        <label for="elasticity-base">Base
+                            <input id="elasticity-base" type="number" min="0" step="0.1" value="1.5">
+                        </label>
+                        <label for="elasticity-high">High
+                            <input id="elasticity-high" type="number" min="0" step="0.1" value="2.5">
                         </label>
                     </div>
+                    <p class="help-text">Business assumptions—not causal ML estimates.</p>
                 </div>
 
-                <div class="control-group" id="manual-elasticity-group">
-                    <label for="elasticity">Revenue Elasticity</label>
-                    <input type="range" id="elasticity" min="0.1" max="5.0" step="0.1" value="2.0">
-                    <span id="elasticity-val">2.0</span>
-                    <p class="help-text">Higher elasticity = Rebates drive more growth.</p>
-                </div>
+                <label class="check-row">
+                    <input type="checkbox" id="auto-candidates" checked>
+                    Compare rounded, data-supported thresholds
+                </label>
 
-                <div class="control-group">
-                    <label>Volume Thresholds</label>
-                    <div class="help-text">Enter comma-separated values (e.g., 5000, 15000, 30000, 50000)</div>
-                    <input type="text" id="vol-bins-input" class="text-input" value="5000, 15000, 30000, 50000">
-                </div>
-
-                <div class="control-group">
-                    <label>Growth Thresholds</label>
-                    <div class="help-text">Enter comma-separated decimals (e.g., 0.08, 0.15, 0.20)</div>
-                    <input type="text" id="growth-bins-input" class="text-input" value="0.08, 0.15, 0.20">
-                </div>
-
-                <button id="run-btn" class="primary-btn">Run Optimization</button>
-            </div>
+                <button id="run-btn" class="primary-btn">Design contract</button>
+                <div class="status" id="status-indicator" role="status">Ready</div>
+            </section>
         </aside>
 
-        <!-- Main Content: Results -->
         <main class="main-content">
-            <header>
-                <h2>Simulation Results</h2>
-                <div class="status" id="status-indicator">Ready</div>
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow">Quarterly rebate program</p>
+                    <h2>Contract design and scenario results</h2>
+                </div>
             </header>
 
-            <div class="main-content">
-                <!-- Tabs -->
-                <div class="tabs">
-                    <button class="tab-btn active" data-tab="optimizer">Optimizer</button>
-                    <button class="tab-btn" data-tab="calculator">Static Calculator</button>
+            <div class="tabs" role="tablist">
+                <button class="tab-btn active" data-tab="optimizer" role="tab">Optimizer</button>
+                <button class="tab-btn" data-tab="calculator" role="tab">Static calculator</button>
+            </div>
+
+            <section id="optimizer" class="tab-content active">
+                <div id="error-panel" class="notice error hidden"></div>
+                <div id="warning-panel" class="notice warning hidden"></div>
+
+                <div class="kpi-grid">
+                    <article class="kpi-card">
+                        <h3>Base net revenue</h3>
+                        <div class="value" id="base-net">$0</div>
+                        <div class="subtitle">Projected revenue minus payout</div>
+                    </article>
+                    <article class="kpi-card">
+                        <h3>Base uplift</h3>
+                        <div class="value highlight" id="base-uplift">$0</div>
+                        <div class="subtitle">Compared with no program</div>
+                    </article>
+                    <article class="kpi-card">
+                        <h3>Base payout</h3>
+                        <div class="value" id="base-payout">$0</div>
+                        <div class="subtitle">Subject to the configured cap</div>
+                    </article>
+                    <article class="kpi-card">
+                        <h3>Eligible accounts</h3>
+                        <div class="value" id="eligible-accounts">0</div>
+                        <div class="subtitle" id="coverage-subtitle">0 source rows reconciled</div>
+                    </article>
                 </div>
 
-                <!-- Optimizer Tab -->
-                <div id="optimizer" class="tab-content active">
-                    <div class="kpi-grid">
-                        <div class="kpi-card">
-                            <h3>Projected Revenue</h3>
-                            <div class="value" id="max-revenue">$0</div>
-                            <div class="subtitle">Optimized Scenario</div>
+                <div class="results-grid">
+                    <section class="results-section">
+                        <div class="section-heading">
+                            <div>
+                                <p class="eyebrow">Selected candidate</p>
+                                <h3 id="selected-candidate">No result yet</h3>
+                            </div>
+                            <span class="badge" id="migration-badge">Awaiting run</span>
                         </div>
-                        <div class="kpi-card">
-                            <h3>Baseline Revenue</h3>
-                            <div class="value" id="baseline-revenue">$0</div>
-                            <div class="subtitle">Current State</div>
-                        </div>
-                        <div class="kpi-card">
-                            <h3>Revenue Uplift</h3>
-                            <div class="value highlight" id="revenue-uplift">$0</div>
-                            <div class="subtitle">Net Gain</div>
-                        </div>
-                    </div>
-
-                    <div class="results-section">
-                        <h3>Optimized Rebate Grid</h3>
                         <div class="table-container">
                             <table id="results-table">
-                                <thead>
-                                    <!-- Headers injected by JS -->
-                                </thead>
-                                <tbody>
-                                    <!-- Rows injected by JS -->
-                                </tbody>
+                                <thead></thead>
+                                <tbody></tbody>
                             </table>
                         </div>
-                    </div>
+                    </section>
+
+                    <section class="results-section">
+                        <h3>Scenario comparison</h3>
+                        <div class="table-container">
+                            <table id="scenario-table">
+                                <thead>
+                                    <tr>
+                                        <th>Scenario</th>
+                                        <th>Projected revenue</th>
+                                        <th>Payout</th>
+                                        <th>Net revenue</th>
+                                        <th>Uplift</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </section>
                 </div>
 
-                <!-- Calculator Tab -->
-                <div id="calculator" class="tab-content">
-                    <div class="control-panel" style="margin-bottom: 1rem;">
-                        <h3>Manual Grid Input</h3>
-                        <p class="help-text">Enter rebate percentages (e.g., 0.10 for 10%) for each tier.</p>
-                        <button id="generate-grid-btn" class="primary-btn"
-                            style="width: auto; margin-top: 0.5rem;">Generate/Reset Grid</button>
-                    </div>
-
+                <section class="results-section">
+                    <h3>Cell coverage and payout exposure</h3>
                     <div class="table-container">
-                        <table id="input-grid-table">
-                            <thead>
-                                <!-- Headers injected by JS -->
-                            </thead>
-                            <tbody>
-                                <!-- Input Rows injected by JS -->
-                            </tbody>
+                        <table id="coverage-table">
+                            <thead></thead>
+                            <tbody></tbody>
                         </table>
                     </div>
+                </section>
 
-                    <button id="calc-static-btn" class="primary-btn" style="margin-top: 1rem;">Calculate Cost</button>
-
-                    <div class="kpi-grid" style="margin-top: 2rem;">
-                        <div class="kpi-card">
-                            <h3>Total Revenue</h3>
-                            <div class="value" id="static-revenue">$0</div>
-                            <div class="subtitle">Baseline</div>
-                        </div>
-                        <div class="kpi-card">
-                            <h3>Total Rebate Cost</h3>
-                            <div class="value" id="static-cost">$0</div>
-                            <div class="subtitle">Based on Input Grid</div>
-                        </div>
-                        <div class="kpi-card">
-                            <h3>Average Rate</h3>
-                            <div class="value highlight" id="static-avg-rate">0%</div>
-                            <div class="subtitle">Effective Rate</div>
-                        </div>
-                    </div>
+                <div class="results-grid">
+                    <section class="results-section">
+                        <h3>Contract language</h3>
+                        <ul id="contract-list" class="contract-list"></ul>
+                    </section>
+                    <section class="results-section">
+                        <h3>Candidate validation</h3>
+                        <div id="candidate-list" class="candidate-list"></div>
+                    </section>
                 </div>
-            </div>
+
+                <section class="results-section">
+                    <h3>Eligibility reconciliation</h3>
+                    <div id="reconciliation" class="reconciliation-grid"></div>
+                </section>
+            </section>
+
+            <section id="calculator" class="tab-content">
+                <section class="results-section">
+                    <div class="section-heading">
+                        <div>
+                            <h3>Manual contract cost</h3>
+                            <p class="help-text">Uses the same eligibility and payout formulas as the optimizer.</p>
+                        </div>
+                        <button id="generate-grid-btn" class="secondary-btn">Generate grid</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="input-grid-table">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button id="calc-static-btn" class="primary-btn action-btn">Calculate actual cost</button>
+                </section>
+
+                <div class="kpi-grid">
+                    <article class="kpi-card">
+                        <h3>Total revenue</h3>
+                        <div class="value" id="static-revenue">$0</div>
+                    </article>
+                    <article class="kpi-card">
+                        <h3>Eligible revenue</h3>
+                        <div class="value" id="static-eligible-revenue">$0</div>
+                    </article>
+                    <article class="kpi-card">
+                        <h3>Total payout</h3>
+                        <div class="value" id="static-cost">$0</div>
+                    </article>
+                    <article class="kpi-card">
+                        <h3>Effective rate</h3>
+                        <div class="value highlight" id="static-avg-rate">0%</div>
+                    </article>
+                </div>
+            </section>
+        </main>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>

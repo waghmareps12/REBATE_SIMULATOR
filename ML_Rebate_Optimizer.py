@@ -21,6 +21,56 @@ class MLRebateOptimizer:
         self.df_processed = None
         self.agg_data = None
 
+    # def _train_model(self):
+    #     """
+    #     Train a Log-Log Regression model to predict Growth based on Rebate Rate.
+        
+    #     Log-Log Model captures DIMINISHING RETURNS:
+    #     - log(1 + Growth) ~ log(1 + Rebate_Rate)
+    #     - Coefficient = Elasticity (% change in growth per % change in rebate)
+    #     - More realistic than linear: 10%→11% has less impact than 1%→2%
+    #     """
+    #     # Prepare training data from REAL historical data
+    #     df = self.df_base.copy()
+        
+    #     # Ensure numeric
+    #     df['curryr_rev'] = pd.to_numeric(df['curryr_rev'], errors='coerce').fillna(0)
+    #     df['prevyr_rev'] = pd.to_numeric(df['prevyr_rev'], errors='coerce').fillna(0)
+    #     df['rebate_rate'] = pd.to_numeric(df['rebate_rate'], errors='coerce').fillna(0)
+        
+    #     # Calculate growth
+    #     df['growth'] = (df['curryr_rev'] - df['prevyr_rev']) / df['prevyr_rev']
+    #     df.replace([np.inf, -np.inf], 0, inplace=True)
+    #     df['growth'] = df['growth'].fillna(0)
+        
+    #     # Filter outliers and ensure positive values for log transform
+    #     # Growth must be > -1 for log(1 + growth) to be defined
+    #     df = df[(df['growth'] > -0.9) & (df['growth'] < 5.0)]
+    #     df = df[df['rebate_rate'] > 0]  # Need positive rebates for log
+        
+    #     # Log-Log Transformation
+    #     # X: log(1 + rebate_rate) - adding 1 handles rebate_rate = 0
+    #     # y: log(1 + growth) - adding 1 ensures positive values
+    #     X = np.log1p(df['rebate_rate']).values.reshape(-1, 1)  # log1p = log(1+x)
+    #     y = np.log1p(df['growth'])
+        
+    #     # Fit Linear Regression in log-log space
+    #     # Model: log(1+Growth) = β₀ + β₁ × log(1+Rebate)
+    #     # Interpretation: β₁ = Elasticity (% change in growth per % change in rebate)
+    #     model = LinearRegression()
+    #     model.fit(X, y)
+        
+    #     elasticity = model.coef_[0]
+    #     intercept = model.intercept_
+        
+    #     print(f"\n=== Log-Log ML Model Trained ===")
+    #     print(f"Elasticity (β₁): {elasticity:.4f}")
+    #     print(f"  → A 10% increase in rebate → {elasticity*10:.2f}% increase in growth")
+    #     print(f"Intercept (β₀): {intercept:.4f}")
+    #     print(f"Training samples: {len(df)}")
+        
+    #     return model
+
     def _train_model(self):
         """
         Train a Linear Regression model to predict Growth based on Rebate Rate.
@@ -83,6 +133,8 @@ class MLRebateOptimizer:
     def objective_function(self, flat_rates):
         """
         Objective function to MINIMIZE (negative Net Revenue).
+        
+        Uses the log-log model to predict growth with diminishing returns.
         """
         rows = len(self.volume_bins)
         cols = len(self.growth_bins)
@@ -91,10 +143,16 @@ class MLRebateOptimizer:
         # Map rates to aggregated data
         applied_rates = rates_grid[self.agg_data['v_idx'], self.agg_data['g_idx']]
         
-        # Predict Growth using ML Model
-        # X_pred must match training features: [['rebate_rate']]
-        X_pred = pd.DataFrame({'rebate_rate': applied_rates})
-        predicted_growth = self.model.predict(X_pred)
+        # Predict Growth using Log-Log ML Model
+        # Model was trained on: log(1+Growth) ~ log(1+Rebate)
+        # So we need to:
+        # 1. Transform input: log(1 + rebate_rate)
+        # 2. Get prediction: log(1 + predicted_growth)
+        # 3. Inverse transform: predicted_growth = exp(prediction) - 1
+        
+        X_pred = np.log1p(applied_rates).reshape(-1, 1)  # log(1 + rebate)
+        log_growth_pred = self.model.predict(X_pred)  # Returns log(1 + growth)
+        predicted_growth = np.expm1(log_growth_pred)  # expm1(x) = exp(x) - 1
         
         # Project Revenue
         base_revenue = self.agg_data['prevyr_rev']

@@ -6,6 +6,8 @@
     --accent-color: #3b82f6;
     --accent-hover: #2563eb;
     --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
     --border-color: #334155;
     --font-main: 'Inter', sans-serif;
 }
@@ -20,8 +22,7 @@ body {
     font-family: var(--font-main);
     background-color: var(--bg-dark);
     color: var(--text-primary);
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
 }
 
 .app-container {
@@ -142,6 +143,7 @@ input[type="range"] {
 /* Main Content */
 .main-content {
     flex: 1;
+    min-width: 0;
     padding: 2rem;
     overflow-y: auto;
     background: radial-gradient(circle at top right, #1e293b 0%, #0f172a 40%);
@@ -157,6 +159,8 @@ header {
 .status {
     font-size: 0.875rem;
     color: var(--text-secondary);
+    margin-top: 0.75rem;
+    line-height: 1.4;
 }
 
 /* Tabs */
@@ -238,12 +242,14 @@ header {
 /* KPI Cards */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 1.5rem;
     margin-bottom: 2rem;
 }
 
-.card {
+.card,
+.kpi-card,
+.results-section {
     background-color: rgba(30, 41, 59, 0.7);
     backdrop-filter: blur(10px);
     border: 1px solid var(--border-color);
@@ -258,10 +264,15 @@ header {
     margin-bottom: 0.5rem;
 }
 
+.kpi-card {
+    padding: 1.25rem;
+}
+
 .kpi-card .value {
-    font-size: 2rem;
+    font-size: clamp(1.45rem, 2.4vw, 2rem);
     font-weight: 700;
     color: var(--text-primary);
+    overflow-wrap: anywhere;
 }
 
 .kpi-card.highlight .value {
@@ -310,4 +321,270 @@ td:first-child {
 td:not(:first-child) {
     text-align: center;
     font-family: monospace;
+}
+
+.page-header {
+    align-items: flex-end;
+}
+
+.page-header h2 {
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.eyebrow {
+    color: var(--accent-color);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+}
+
+.scenario-inputs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+.scenario-inputs input {
+    width: 100%;
+    margin-top: 0.35rem;
+    padding: 0.5rem;
+    color: var(--text-primary);
+    background: var(--bg-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 0.4rem;
+}
+
+.check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    margin: 0 0 1.25rem;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.check-row input {
+    margin-top: 0.15rem;
+    accent-color: var(--accent-color);
+}
+
+.notice {
+    border-radius: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding: 1rem 1.25rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.notice.error {
+    color: #fecaca;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.notice.warning {
+    color: #fde68a;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.hidden {
+    display: none;
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.results-section {
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+}
+
+.results-section h3 {
+    margin-bottom: 1rem;
+}
+
+.section-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.section-heading h3,
+.section-heading .eyebrow {
+    margin-bottom: 0.25rem;
+}
+
+.badge {
+    color: #bfdbfe;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 999px;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.rate-cell {
+    color: #dbeafe;
+    background: rgba(59, 130, 246, 0.08);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.muted {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+.positive,
+.highlight {
+    color: var(--success-color) !important;
+}
+
+.negative {
+    color: var(--danger-color);
+}
+
+.contract-list {
+    padding-left: 1.25rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.contract-list li + li {
+    margin-top: 0.5rem;
+}
+
+.candidate-list {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.candidate-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.candidate-row:last-child {
+    border-bottom: 0;
+}
+
+.candidate-row p {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    margin-top: 0.25rem;
+}
+
+.candidate-state {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.candidate-state.pass {
+    color: #a7f3d0;
+    background: rgba(16, 185, 129, 0.15);
+}
+
+.candidate-state.fail {
+    color: #fecaca;
+    background: rgba(239, 68, 68, 0.15);
+}
+
+.reconciliation-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+}
+
+.reconciliation-grid div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: rgba(15, 23, 42, 0.55);
+    border-radius: 0.5rem;
+}
+
+.reconciliation-grid span {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+.secondary-btn {
+    color: var(--text-primary);
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.6rem 0.9rem;
+    cursor: pointer;
+}
+
+.secondary-btn:hover {
+    border-color: var(--accent-color);
+}
+
+.action-btn {
+    width: auto;
+    margin-top: 1rem;
+}
+
+@media (max-width: 1400px) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .results-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 760px) {
+    body {
+        overflow: auto;
+    }
+
+    .app-container {
+        display: block;
+        height: auto;
+    }
+
+    .sidebar {
+        width: 100%;
+        max-height: none;
+    }
+
+    .main-content {
+        padding: 1.25rem;
+    }
+
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    th,
+    td {
+        padding: 0.75rem;
+    }
 }
